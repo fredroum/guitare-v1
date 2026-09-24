@@ -1,0 +1,27 @@
+GUITARE V1 — VERSION IPAD
+
+Le microphone de l'iPad nécessite que le site soit ouvert en HTTPS.
+
+MISE EN LIGNE SIMPLE AVEC GITHUB PAGES
+1. Créer un compte GitHub si nécessaire.
+2. Créer un nouveau dépôt public, par exemple : guitare-v1
+3. Ajouter index.html et manifest.webmanifest à la racine du dépôt.
+4. Ouvrir Settings > Pages.
+5. Dans Build and deployment, choisir Deploy from a branch.
+6. Choisir la branche main et le dossier /(root), puis Save.
+7. GitHub fournit ensuite une adresse HTTPS du type :
+   https://VOTRE-NOM.github.io/guitare-v1/
+8. Ouvrir cette adresse dans Safari sur l'iPad.
+9. Appuyer sur Démarrer l'écoute et autoriser le microphone.
+10. Dans Safari : Partager > Sur l'écran d'accueil pour l'utiliser comme une app.
+
+TEST CONSEILLÉ
+Jouer séparément les cordes à vide :
+6 = Mi grave
+5 = La
+4 = Ré
+3 = Sol
+2 = Si
+1 = Mi aigu
+
+Cette V1 est optimisée pour des notes isolées. Les accords viendront plus tard.

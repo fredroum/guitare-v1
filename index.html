@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Guitare V1 — iPad</title>
+<meta name="theme-color" content="#101114">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Guitare V1">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color-scheme:dark}
+body{margin:0;background:#101114;color:#f5f5f7;min-height:100vh;display:grid;place-items:center}
+main{width:min(92vw,760px);text-align:center;padding:24px}
+h1{font-size:clamp(28px,6vw,48px);margin:0 0 8px}
+.sub{color:#aaa;margin-bottom:28px}
+.card{background:#1c1d21;border:1px solid #333;border-radius:22px;padding:28px}
+.note{font-size:clamp(72px,22vw,150px);font-weight:800;line-height:1}
+.freq{font-size:22px;color:#bbb;margin:12px 0}
+.pos{font-size:26px;margin:18px 0;min-height:34px}
+.meter{height:18px;background:#333;border-radius:20px;position:relative;margin:28px 0 10px;overflow:hidden}
+.center{position:absolute;left:49.5%;width:1%;height:100%;background:white}
+.needle{position:absolute;left:50%;top:0;width:8px;height:100%;background:#aaa;border-radius:5px;transform:translateX(-50%);transition:left .08s}
+.cents{color:#bbb}
+button{font-size:22px;font-weight:700;padding:16px 28px;border:0;border-radius:16px;margin-top:24px;cursor:pointer}
+#status{margin-top:16px;color:#aaa;min-height:24px}
+.good{color:#76e08a!important}
+</style>
+</head>
+<body>
+<main>
+<h1>🎸 Guitare V1</h1>
+<div class="sub">Détection de note — accordage standard E A D G B E</div>
+<div class="card">
+<div id="note" class="note">—</div>
+<div id="freq" class="freq">0.0 Hz</div>
+<div id="pos" class="pos">Joue une note</div>
+<div class="meter"><div class="center"></div><div id="needle" class="needle"></div></div>
+<div id="cents" class="cents">—</div>
+<button id="start">Démarrer l'écoute</button>
+<div id="status">Le navigateur demandera l'autorisation d'utiliser le micro.</div>
+</div>
+</main>
+<script>
+const noteEl=document.querySelector('#note'),freqEl=document.querySelector('#freq'),
+posEl=document.querySelector('#pos'), centsEl=document.querySelector('#cents'),
+needle=document.querySelector('#needle'), statusEl=document.querySelector('#status'),
+button=document.querySelector('#start');
+
+const names=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const strings=[
+ {n:6,m:40,label:"Mi grave"}, {n:5,m:45,label:"La"}, {n:4,m:50,label:"Ré"},
+ {n:3,m:55,label:"Sol"}, {n:2,m:59,label:"Si"}, {n:1,m:64,label:"Mi aigu"}
+];
+let ctx, analyser, data, running=false;
+
+function autoCorrelate(buf, rate){
+ let size=buf.length, rms=0;
+ for(let i=0;i<size;i++) rms+=buf[i]*buf[i];
+ rms=Math.sqrt(rms/size); if(rms<0.012) return -1;
+ let r1=0,r2=size-1,th=.2;
+ for(let i=0;i<size/2;i++) if(Math.abs(buf[i])<th){r1=i;break}
+ for(let i=1;i<size/2;i++) if(Math.abs(buf[size-i])<th){r2=size-i;break}
+ buf=buf.slice(r1,r2); size=buf.length;
+ let c=new Array(size).fill(0);
+ for(let lag=0;lag<size;lag++)
+   for(let i=0;i<size-lag;i++) c[lag]+=buf[i]*buf[i+lag];
+ let d=0; while(d+1<size && c[d]>c[d+1]) d++;
+ let max=-1,pos=-1;
+ for(let i=d;i<size;i++) if(c[i]>max){max=c[i];pos=i}
+ if(pos<=0) return -1;
+ let x1=c[pos-1]||c[pos],x2=c[pos],x3=c[pos+1]||c[pos];
+ let a=(x1+x3-2*x2)/2,b=(x3-x1)/2;
+ if(a) pos-=b/(2*a);
+ return rate/pos;
+}
+function midiFromFreq(f){return 69+12*Math.log2(f/440)}
+function noteName(m){
+ let r=Math.round(m); return names[(r%12+12)%12]+(Math.floor(r/12)-1)
+}
+function guitarPosition(midi){
+ let m=Math.round(midi), opts=[];
+ strings.forEach(s=>{let fret=m-s.m;if(fret>=0&&fret<=22) opts.push({s:s.n,f:fret,label:s.label})});
+ if(!opts.length)return "Hors tessiture guitare";
+ opts.sort((a,b)=>a.f-b.f);
+ let p=opts[0];
+ return `Corde ${p.s} (${p.label}) — case ${p.f}`;
+}
+function tick(){
+ if(!running)return;
+ analyser.getFloatTimeDomainData(data);
+ let f=autoCorrelate(data,ctx.sampleRate);
+ if(f>70&&f<1400){
+   let m=midiFromFreq(f), nearest=Math.round(m);
+   let cents=Math.round(100*(m-nearest));
+   noteEl.textContent=noteName(m);
+   freqEl.textContent=f.toFixed(1)+" Hz";
+   posEl.textContent=guitarPosition(m);
+   centsEl.textContent=(cents>0?"+":"")+cents+" cents";
+   needle.style.left=(50+Math.max(-45,Math.min(45,cents*.9)))+"%";
+   centsEl.className=Math.abs(cents)<=5?"cents good":"cents";
+ } else {
+   freqEl.textContent="— Hz"; posEl.textContent="Joue une note clairement";
+ }
+ requestAnimationFrame(tick);
+}
+button.onclick=async()=>{
+ try{
+  if(!navigator.mediaDevices?.getUserMedia) throw new Error("Micro non disponible");
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  ctx=new (window.AudioContext||window.webkitAudioContext)();
+  await ctx.resume();
+  analyser=ctx.createAnalyser(); analyser.fftSize=4096;
+  const source=ctx.createMediaStreamSource(stream); source.connect(analyser);
+  data=new Float32Array(analyser.fftSize); running=true;
+  button.disabled=true; button.textContent="Écoute en cours…";
+  statusEl.textContent="Micro actif. Joue une corde ou une note isolée.";
+  tick();
+ }catch(e){
+  statusEl.textContent="Impossible d'accéder au micro : "+e.message+
+  ". Sur iPad, utilise HTTPS ou ouvre cette page depuis un serveur sécurisé.";
+ }
+};
+</script>
+</body></html>
