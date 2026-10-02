@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Guitare V1.2 — iPad</title>
+<title>Guitare V1.3 — iPad</title>
 <meta name="theme-color" content="#101114">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -26,13 +26,13 @@ h1{font-size:clamp(28px,6vw,48px);margin:0 0 8px}
 button{font-size:22px;font-weight:700;padding:16px 28px;border:0;border-radius:16px;margin-top:24px;cursor:pointer}
 #status{margin-top:16px;color:#aaa;min-height:24px}
 .good{color:#76e08a!important}
-</style>
+*{box-sizing:border-box}.modes{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}.modes button{font-size:18px;margin-top:0;padding:14px 18px;background:#303238;color:#fff;border:2px solid transparent}.modes button[aria-pressed="true"]{border-color:#76e08a;background:#23452d}.note{font-size:clamp(52px,16vw,120px)}#hint{color:#bbb;line-height:1.5;margin:0 0 20px}</style>
 </head>
 <body>
 <main>
-<h1>🎸 Guitare V1.2</h1>
+<h1>🎸 Guitare V1.3</h1>
 <div class="sub">Détection de note — accordage standard E A D G B E</div>
-<div class="card">
+<div class="modes" role="group" aria-label="Source de la note"><button id="guitar" aria-pressed="true">🎸 Guitare</button><button id="whistle" aria-pressed="false">🎵 Sifflement</button></div><p id="hint">Joue une seule corde à la fois.</p><div class="card">
 <div id="note" class="note">—</div>
 <div id="freq" class="freq">0.0 Hz</div>
 <div id="pos" class="pos">Joue une note</div>
@@ -51,16 +51,41 @@ needle=document.querySelector('#needle'), statusEl=document.querySelector('#stat
 button=document.querySelector('#start');
 
 const names=["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+let mode="guitar";
+const frenchNames=["Do","Do♯","Ré","Ré♯","Mi","Fa","Fa♯","Sol","Sol♯","La","La♯","Si"];
+function selectMode(next){
+ mode=next; lastNote="";stableCount=0;
+ document.querySelector('#guitar').setAttribute('aria-pressed',String(mode==='guitar'));
+ document.querySelector('#whistle').setAttribute('aria-pressed',String(mode==='whistle'));
+ document.querySelector('#hint').textContent=mode==='whistle'?'Siffle une note stable, sans souffler directement sur le micro.':'Joue une seule corde à la fois.';
+ noteEl.textContent='—';freqEl.textContent='— Hz';centsEl.textContent='—';centsEl.className='cents';needle.style.left='50%';
+ posEl.textContent=mode==='whistle'?'Siffle une note':'Joue une note';
+ if(running)statusEl.textContent=activeMessage();
+}
+function activeMessage(){return mode==='whistle'?'Micro actif. Siffle une note et tiens-la un instant.':'Micro actif. Joue une seule corde près de l’appareil.';}
+document.querySelector('#guitar').onclick=()=>selectMode('guitar');
+document.querySelector('#whistle').onclick=()=>selectMode('whistle');
 const strings=[
  {n:6,m:40,label:"Mi grave"}, {n:5,m:45,label:"La"}, {n:4,m:50,label:"Ré"},
  {n:3,m:55,label:"Sol"}, {n:2,m:59,label:"Si"}, {n:1,m:64,label:"Mi aigu"}
 ];
 let ctx, analyser, data, running=false, lastNote="", stableCount=0;
 
+function whistlePitch(buf,rate){
+ let rms=0;for(const x of buf)rms+=x*x;if(Math.sqrt(rms/buf.length)<0.004)return -1;
+ const max=Math.ceil(rate/200),min=Math.max(2,Math.floor(rate/4000));
+ const d=new Float64Array(max+2),count=buf.length-max-2;
+ for(let lag=1;lag<d.length;lag++){let difference=0,energy=0;for(let i=0;i<count;i++){const a=buf[i],b=buf[i+lag];difference+=(a-b)*(a-b);energy+=a*a+b*b;}d[lag]=energy?difference/energy:1;}
+ for(let lag=min;lag<=max;lag++)if(d[lag]<0.15&&d[lag]<=d[lag-1]&&d[lag]<d[lag+1]){
+ const denom=d[lag-1]-2*d[lag]+d[lag+1];const correction=denom?(d[lag-1]-d[lag+1])/(2*denom):0;return rate/(lag+correction);
+ }
+ return -1;
+}
 function autoCorrelate(buf, rate){
+ if(mode==='whistle')return whistlePitch(buf,rate);
  let size=buf.length, rms=0;
  for(let i=0;i<size;i++) rms+=buf[i]*buf[i];
- rms=Math.sqrt(rms/size); if(rms<0.012) return -1;
+ rms=Math.sqrt(rms/size); if(rms<(mode==='whistle'?0.004:0.012)) return -1;
  let r1=0,r2=size-1,th=.2;
  for(let i=0;i<size/2;i++) if(Math.abs(buf[i])<th){r1=i;break}
  for(let i=1;i<size/2;i++) if(Math.abs(buf[size-i])<th){r2=size-i;break}
@@ -79,7 +104,7 @@ function autoCorrelate(buf, rate){
 }
 function midiFromFreq(f){return 69+12*Math.log2(f/440)}
 function noteName(m){
- let r=Math.round(m); return names[(r%12+12)%12]+(Math.floor(r/12)-1)
+ let r=Math.round(m); return (mode==='whistle'?frenchNames:names)[(r%12+12)%12]+(Math.floor(r/12)-1)
 }
 function guitarPosition(midi){
  let m=Math.round(midi), opts=[];
@@ -93,7 +118,7 @@ function tick(){
  if(!running)return;
  analyser.getFloatTimeDomainData(data);
  let f=autoCorrelate(data,ctx.sampleRate);
- if(f>70&&f<1400){
+ if(f>(mode==='whistle'?200:70)&&f<(mode==='whistle'?4000:1400)){
    let m=midiFromFreq(f), nearest=Math.round(m);
    let cents=Math.round(100*(m-nearest));
    const detected=noteName(m);
@@ -101,12 +126,12 @@ function tick(){
    if(stableCount<3){timer=setTimeout(tick,100);return;}
    noteEl.textContent=detected;
    freqEl.textContent=f.toFixed(1)+" Hz";
-   posEl.textContent=guitarPosition(m);
+   posEl.textContent=mode==='whistle'?'Note sifflée — octave '+(Math.floor(nearest/12)-1):guitarPosition(m);
    centsEl.textContent=(cents>0?"+":"")+cents+" cents";
    needle.style.left=(50+Math.max(-45,Math.min(45,cents*.9)))+"%";
    centsEl.className=Math.abs(cents)<=5?"cents good":"cents";
  } else {
-   lastNote=""; stableCount=0; noteEl.textContent="—"; centsEl.textContent="—"; needle.style.left="50%"; freqEl.textContent="— Hz"; posEl.textContent="Joue une note clairement";
+   lastNote=""; stableCount=0; noteEl.textContent="—"; centsEl.textContent="—"; needle.style.left="50%"; freqEl.textContent="— Hz"; posEl.textContent=mode==='whistle'?'Siffle une note clairement':'Joue une note clairement';
  }
  timer=setTimeout(tick,100);
 }
@@ -163,7 +188,7 @@ button.onclick=async()=>{
   source=audio.createMediaStreamSource(stream); source.connect(analyser);
   data=new Float32Array(analyser.fftSize); running=true; starting=false;
   button.style.display="none";
-  statusEl.textContent="Micro actif. Joue une seule corde près de l’appareil.";
+  statusEl.textContent=activeMessage();
   stream.getTracks().forEach(t=>t.addEventListener('ended',()=>{if(current===session)stopListening("Micro déconnecté. Appuie sur Démarrer pour réessayer.");}));
   audio.onstatechange=()=>{if(current===session&&audio.state!=="running")stopListening("Audio interrompu. Appuie sur Démarrer pour reprendre.");};
   tick();
