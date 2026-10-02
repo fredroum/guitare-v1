@@ -1,9 +1,8 @@
 {
-  "name": "Guitare V1 — Détecteur de notes",
-  "short_name": "Guitare V1",
+  "name": "Guitare V1.2",
+  "short_name": "Guitare",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#101114",
-  "theme_color": "#101114",
-  "description": "Détecteur de notes de guitare pour iPad"
+  "theme_color": "#101114"
 }
