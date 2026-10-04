@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Guitare V1.4 — iPad</title>
+<title>Guitare V1.5 — iPad</title>
 <meta name="theme-color" content="#101114">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,10 +28,10 @@ button{font-size:22px;font-weight:700;padding:16px 28px;border:0;border-radius:1
 .good{color:#76e08a!important}
 *{box-sizing:border-box}.modes{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px}.modes button{font-size:18px;margin-top:0;padding:14px 18px;background:#303238;color:#fff;border:2px solid transparent}.modes button[aria-pressed="true"]{border-color:#76e08a;background:#23452d}.note{font-size:clamp(52px,16vw,120px)}#hint{color:#bbb;line-height:1.5;margin:0 0 20px}.melody{margin-top:24px;text-align:left}.melody h2{margin-top:0;font-size:24px}.melody p{line-height:1.5}.melody button{font-size:18px}.melody select{max-width:100%;font:inherit;padding:12px;background:#303238;color:white;border:1px solid #777;border-radius:8px}.melody label{display:block;margin:20px 0 8px}#record{background:#9c273f;color:white;margin-top:0}#record-time{margin-left:10px;white-space:nowrap}button:disabled{opacity:.5;cursor:default}.scroll{overflow-x:auto}pre{font-size:14px;line-height:1.7}table{width:100%;border-collapse:collapse;font-size:15px}td,th{text-align:left;border-bottom:1px solid #444;padding:10px 8px;white-space:nowrap}.muted{color:#aaa;font-size:14px}[hidden]{display:none!important}@media(max-width:480px){main{padding:12px}.card{padding:18px}}
 </style>
-</head>
+<style>.staff{overflow-x:auto;background:#fff;color:#111;border-radius:10px;padding:8px;min-height:155px}.staff svg{display:block;min-width:640px;width:100%;height:140px}.staff .staff-label{font:14px system-ui,sans-serif;fill:#333}.staff .note-label{font:12px system-ui,sans-serif;fill:#333}</style></head>
 <body>
 <main>
-<h1>🎸 Guitare V1.4</h1>
+<h1>🎸 Guitare V1.5</h1>
 <div class="sub">Détection de note — accordage standard E A D G B E</div>
 <div class="modes" role="group" aria-label="Source de la note"><button id="guitar" aria-pressed="true">🎸 Guitare</button><button id="whistle" aria-pressed="false">🎵 Sifflement</button></div><p id="hint">Joue une seule corde à la fois.</p><div class="card">
 <div id="note" class="note">—</div>
@@ -52,6 +52,7 @@ button{font-size:22px;font-weight:700;padding:16px 28px;border:0;border-radius:1
 <h3>Notes sifflées</h3><p id="original-notes"></p>
 <label for="shift">Octave pour la guitare</label><select id="shift"><option value="auto">Automatique</option><option value="0">Hauteur originale</option><option value="-12">Descendre de 1 octave</option><option value="-24">Descendre de 2 octaves</option><option value="-36">Descendre de 3 octaves</option><option value="12">Monter de 1 octave</option></select>
 <p id="transpose-info"></p>
+<h3>Partition</h3><p class="muted">Portée mélodique transposée pour la guitare. Les noms de notes et les durées restent indiqués dans le tableau.</p><div id="staff" class="staff" role="img" aria-label="Partition de la mélodie"></div>
 <h3>Tablature guitare</h3><p class="muted">Accordage standard Mi–La–Ré–Sol–Si–Mi. Ligne du haut : corde aiguë. Chiffres : cases à jouer. Les colonnes indiquent l’ordre, pas le rythme ; les durées figurent dans le tableau.</p>
 <div class="scroll"><pre id="tab-output" aria-label="Tablature de la mélodie"></pre></div>
 <div class="scroll"><table><thead><tr><th>N°</th><th>Note sifflée</th><th>Durée</th><th>Note guitare</th><th>Position</th></tr></thead><tbody id="note-rows"></tbody></table></div>
@@ -213,6 +214,6 @@ button.onclick=async()=>{
  }catch(e){if(current===session)stopListening(microphoneError(e));}
 };
 </script>
-<script src="melody-core.js?v=1.4"></script>
-<script src="melody.js?v=1.4"></script>
+<script src="melody-core.js?v=1.5"></script>
+<script src="melody.js?v=1.5"></script>
 </body></html>

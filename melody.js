@@ -52,12 +52,24 @@ function renderMelody(){
  document.querySelector('#download').disabled=!result;
  if(!result)return;
  const {m,shift,rows}=result;
+ renderStaff(rows);
  document.querySelector('#original-notes').textContent=m.events.map(e=>e.midi===null?'(silence)':Melody.name(e.midi)).join(' → ');
  const missing=rows.filter(e=>e.target!==null&&!e.position).length;
  document.querySelector('#transpose-info').textContent=(shift===0?'Hauteur originale.':(shift<0?'Descendue de ':'Montée de ')+Math.abs(shift/12)+' octave(s) pour la guitare.')+(missing?' '+missing+' note(s) hors des cases 0 à 12 : signalées dans le tableau.':'');
  const tbody=document.querySelector('#note-rows');tbody.replaceChildren();
  rows.forEach((e,i)=>{const tr=document.createElement('tr');const values=[String(i+1),e.midi===null?'Silence':Melody.name(e.midi),e.duration.toFixed(2)+' s',e.target===null?'—':Melody.name(e.target),e.position?'Corde '+(e.position.string+1)+' · case '+e.position.fret:e.target===null?'Pause':'Hors tessiture'];for(const v of values){const td=document.createElement('td');td.textContent=v;tr.append(td);}tbody.append(tr);});
  document.querySelector('#tab-output').textContent=Melody.tablature(rows);
+}
+function renderStaff(rows){
+ const box=document.querySelector('#staff'); if(!box)return; box.replaceChildren();
+ const ns='http://www.w3.org/2000/svg', width=Math.max(640,rows.length*72+90), svg=document.createElementNS(ns,'svg');
+ svg.setAttribute('viewBox',`0 0 ${width} 140`);svg.setAttribute('role','img');
+ for(let i=0;i<5;i++){const line=document.createElementNS(ns,'line');line.setAttribute('x1','42');line.setAttribute('x2',width-18);line.setAttribute('y1',40+i*16);line.setAttribute('y2',40+i*16);line.setAttribute('stroke','#222');line.setAttribute('stroke-width','1.5');svg.append(line);}
+ const clef=document.createElementNS(ns,'text');clef.textContent='𝄞';clef.setAttribute('x','10');clef.setAttribute('y','91');clef.setAttribute('font-size','55');clef.setAttribute('fill','#222');svg.append(clef);
+ const natural=[0,2,4,5,7,9,11], namesShort=['Do','Ré','Mi','Fa','Sol','La','Si'];
+ const yFor=midi=>{const pc=((midi%12)+12)%12, octave=Math.floor(midi/12)-1;let best=0,d=99;natural.forEach((n,i)=>{const diff=Math.abs(pc-n);if(diff<d){d=diff;best=i;}});const step=(octave-4)*7+best;return 104-step*8;};
+ rows.forEach((e,i)=>{const x=68+i*72;if(e.target===null){const rest=document.createElementNS(ns,'text');rest.textContent='𝄽';rest.setAttribute('x',x);rest.setAttribute('y','78');rest.setAttribute('font-size','24');rest.setAttribute('fill','#333');svg.append(rest);return;}const y=yFor(e.target), stem=document.createElementNS(ns,'line');stem.setAttribute('x1',x+5);stem.setAttribute('x2',x+5);stem.setAttribute('y1',y);stem.setAttribute('y2',y-30);stem.setAttribute('stroke','#222');stem.setAttribute('stroke-width','2');svg.append(stem);const head=document.createElementNS(ns,'ellipse');head.setAttribute('cx',x);head.setAttribute('cy',y);head.setAttribute('rx','9');head.setAttribute('ry','6');head.setAttribute('transform',`rotate(-20 ${x} ${y})`);head.setAttribute('fill','#111');svg.append(head);const label=document.createElementNS(ns,'text');label.textContent=Melody.name(e.target).replace(/[0-9]+$/,'');label.setAttribute('x',x-14);label.setAttribute('y','128');label.setAttribute('class','note-label');svg.append(label);});
+ box.append(svg);
 }
 library.onchange=()=>{shiftSelect.value='auto';renderMelody();};shiftSelect.onchange=renderMelody;
 document.querySelector('#download').onclick=()=>{
